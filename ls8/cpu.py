@@ -2,12 +2,19 @@
 
 import sys
 
+# opcode
+LDI = 0b10000010
+PRN = 0b01000111
+HLT = 0b00000001
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.reg = [0] * 8
+        self.pc = 0
+        self.ram = [0] * 256
 
     def load(self):
         """Load a program into memory."""
@@ -62,4 +69,31 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+        # Flags can change based on the 
+        # operands given to the CMP opcode
+        FL = True
+
+        while FL:
+            # Instruction Register - current instruction
+            ir = self.ram[self.pc]
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
+            if ir == HLT:
+                print("Exit the emulator")
+                FL = False
+            elif ir == LDI:
+                self.reg[operand_a] = operand_b
+                print(f'Set register[{operand_a}] to {operand_b}')
+                self.pc += 3
+            elif ir == PRN:
+                print(f'{self.reg[operand_a]} is stored in {operand_a}')
+                self.pc += 2
+            else:
+                print(f"Error: Unknown command: {ir}")
+                sys.exit(1)
+
+    def ram_read(self, mar):
+        return self.ram[mar]
+
+    def ram_write(self, address, mdr):
+        self.ram[address] = mdr
