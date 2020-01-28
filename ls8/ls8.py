@@ -6,6 +6,6 @@ import sys
 from cpu import *
 
 cpu = CPU()
-
-cpu.load()
+filename = 'examples/mult.ls8'
+cpu.load(filename)
 cpu.run()
