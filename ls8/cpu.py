@@ -1,5 +1,4 @@
 """CPU functionality."""
-
 import sys
 
 # opcodes
@@ -9,6 +8,9 @@ HLT = 0b00000001
 MUL = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
+CALL = 0b01010000
+ADD = 0b10100000
+RET = 0b00010001
 
 
 class CPU:
@@ -17,18 +19,22 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.reg = [0] * 8
-        self.reg[7] = 0xF4
+        # self.reg[7] = 0xF4
+        self.reg[7] = 256
         self.sp = self.reg[-1]
         self.pc = 0
         self.ram = [0] * 256
         self.fl = True
-        self.branchtable = {}
-        self.branchtable[LDI] = self.ldi
-        self.branchtable[MUL] = self.mul
-        self.branchtable[PRN] = self.prn
-        self.branchtable[HLT] = self.hlt
-        self.branchtable[PUSH] = self.push
-        self.branchtable[POP] = self.pop
+        self.prn_list = []
+        self.branchtable = {LDI: self.ldi,
+                            MUL: self.mul,
+                            PRN: self.prn,
+                            HLT: self.hlt,
+                            PUSH: self.push,
+                            POP: self.pop,
+                            ADD: self.add,
+                            CALL: self.call,
+                            RET: self.ret}
 
     def ldi(self, op_a, op_b):
         # Set the value of a register to an integer
@@ -50,12 +56,21 @@ class CPU:
         print(
             f'PRN - {self.reg[op_a]} is stored in reg[{op_a}]')
         self.pc += 2
+        self.prn_list.append(self.reg[op_a])
 
     def hlt(self, op_a, op_b):
         # Flags can change based on the
         # operands given to the CMP opcode
         self.fl = False
         print("HLT - Exit the emulator")
+
+    def add(self, op_a, op_b):
+        # Add the value in two registers and
+        # store the result in registerA.
+        print(
+            f'ADD - Set reg[{op_a}] to {self.reg[op_a]}+{self.reg[op_b]}')
+        self.reg[op_a] += self.reg[op_b]
+        self.pc += 3
 
     def push(self, op_a, op_b):
         # Push value in the given register to stack
@@ -77,6 +92,28 @@ class CPU:
         self.sp += 1
         self.pc += 2
 
+    def call(self, op_a, op_b):
+        # operand_a = self.ram_read(self.pc + 1)
+        # Calls subroutine at address stored in the register
+        # Address of instruction after CALL pushed to stack
+        # self.push(op_a, op_b)
+        self.sp -= 1
+        self.ram[self.sp] = self.pc + 2
+        # PC set to address stored in given register
+        subroutine_address = self.reg[op_a]
+        print(f'Calling SR at address {subroutine_address}')
+        # Jump to location in RAM and execute 1st instruction in subroutine
+        # PC can move forward/backwards from current location
+        self.pc = subroutine_address
+
+    def ret(self, op_a, op_b):
+        # Return from subroutine
+        # Pop the value from the top of the stack and store it in the PC
+        self.pc = self.ram[self.sp]
+        print(f'Returning to address {self.pc}')
+        # Increment SP by 1
+        self.sp += 1
+
     def load(self, filename):
         """Load a program into memory."""
         try:
@@ -90,7 +127,7 @@ class CPU:
                     # Skip blank lines
                     if num == '':
                         continue
-                    # Base 10, but ls-8 is base 2
+                    # Convert ls-8 to base 2
                     value = int(num, 2)
                     self.ram_write(address, value)
                     address += 1
@@ -147,6 +184,7 @@ class CPU:
                 print(f"Error: Unknown command: {ir}")
                 sys.exit(1)
             count += 1
+        print(self.prn_list)
 
     def ram_read(self, mar):
         return self.ram[mar]
